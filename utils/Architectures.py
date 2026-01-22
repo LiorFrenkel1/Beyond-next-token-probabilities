@@ -216,7 +216,8 @@ class LOS_Net(nn.Module):
         else:
             raise ValueError("Invalid encoding type. Please choose either 'scale_encoding' or 'one_hot_encoding'.")
         
-        
+        # Weight for the delta for each token between the probability of the current token and the previous probabilty
+        self.param_for_probabilities_delta = nn.Parameter(torch.randn(1, 1, self.hidden_dim // 2))
         
         # Input embedding layer
         self.input_proj = nn.Linear(input_dim, self.hidden_dim // 2)
@@ -274,12 +275,17 @@ class LOS_Net(nn.Module):
         # Encoding normalized mark
         encoded_normalized_ATP = normalized_ATP * self.param_for_normalized_ATP
         
+        # Creating a vector with all the token probabilities shifted in order to found the delta between neighboors token probabilities
+        before_ATP = torch.zeros_like(normalized_ATP[:, :1, :])
+        before_ATP = torch.cat((before_ATP, normalized_ATP[:, 0:-1, :]), dim=1)
+        delta = normalized_ATP - before_ATP
+        delta_between_probabilities = delta * self.param_for_probabilities_delta
         
         # Encoding normalized vocab
         encoded_sorted_TDS_normalized = self.input_proj(sorted_TDS_normalized.to(torch.float32))
         
         # Concatenating embeddings
-        x = torch.cat((encoded_sorted_TDS_normalized, encoded_ATP_R + encoded_normalized_ATP), dim=-1)
+        x = torch.cat((encoded_sorted_TDS_normalized, encoded_ATP_R + encoded_normalized_ATP + delta_between_probabilities), dim=-1)
         
         # Adding CLS token
         b, n, _ = x.shape
