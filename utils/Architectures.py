@@ -216,8 +216,6 @@ class LOS_Net(nn.Module):
         else:
             raise ValueError("Invalid encoding type. Please choose either 'scale_encoding' or 'one_hot_encoding'.")
         
-        # Weight for detla between highest probability for a token and the probability for the token the LLM chose
-        self.param_for_highest_delta = nn.Parameter(torch.randn(1, 1, self.hidden_dim // 2))
         
         
         # Input embedding layer
@@ -275,11 +273,7 @@ class LOS_Net(nn.Module):
         
         # Encoding normalized mark
         encoded_normalized_ATP = normalized_ATP * self.param_for_normalized_ATP
-
-        # Add the new weight to RE 
-        p_highest = sorted_TDS_normalized[:, :, 0].unsqueeze(-1)
-        delta_from_highest = normalized_ATP - p_highest
-        encoded_gap = delta_from_highest * self.param_for_highest_delta
+        
         
         # Encoding normalized vocab
         encoded_sorted_TDS_normalized = self.input_proj(sorted_TDS_normalized.to(torch.float32))
