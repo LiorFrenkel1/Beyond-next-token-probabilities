@@ -216,8 +216,10 @@ class LOS_Net(nn.Module):
         else:
             raise ValueError("Invalid encoding type. Please choose either 'scale_encoding' or 'one_hot_encoding'.")
         
-        # Weight for the delta for each token between the probability of the current token and the previous probabilty
+        # Weight for the delta for each token between the probability of the current token and the previous probability
         self.param_for_probabilities_delta = nn.Parameter(torch.randn(1, 1, self.hidden_dim // 2))
+        # Weight for delta between highest probability for a token and the probability for the token the LLM chose
+        self.param_for_highest_delta = nn.Parameter(torch.randn(1, 1, self.hidden_dim // 2))
         
         # Input embedding layer
         self.input_proj = nn.Linear(input_dim, self.hidden_dim // 2)
@@ -274,6 +276,11 @@ class LOS_Net(nn.Module):
         
         # Encoding normalized mark
         encoded_normalized_ATP = normalized_ATP * self.param_for_normalized_ATP
+
+        # Add the new weight to RE
+        p_highest = sorted_TDS_normalized[:, :, 0].unsqueeze(-1)
+        delta_from_highest = normalized_ATP - p_highest
+        encoded_gap = delta_from_highest * self.param_for_highest_delta
         
         # Creating a vector with all the token probabilities shifted in order to found the delta between neighboors token probabilities
         before_ATP = torch.zeros_like(normalized_ATP[:, :1, :])
