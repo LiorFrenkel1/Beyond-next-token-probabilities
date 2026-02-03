@@ -220,6 +220,9 @@ class LOS_Net(nn.Module):
         
         # Input embedding layer
         self.input_proj = nn.Linear(input_dim, self.hidden_dim // 2)
+
+        # Maps the features (hidden/2 + hidden/2 + 1) back to hidden_dim so it wouldnt crash
+        self.fusion_proj = nn.Linear(self.hidden_dim + 1, self.hidden_dim)
         
         # CLS token
         self.cls_token = nn.Parameter(torch.randn(1, 1, self.hidden_dim))
@@ -277,10 +280,24 @@ class LOS_Net(nn.Module):
         
         # Encoding normalized vocab
         encoded_sorted_TDS_normalized = self.input_proj(sorted_TDS_normalized.to(torch.float32))
-        
+
+        sigma_prob = 0.9
+        # Count how many tokens does it take to reach prob_sum to see how many options the LLM thought it had
+        tokens_cum_prob = torch.cumsum(sorted_TDS_normalized, dim=-1)
+        tokens_cum_prob[tokens_cum_prob >= sigma_prob] = 0
+        tokens_cum_prob[tokens_cum_prob != 0] = 1
+
+        needed_tokens = torch.sum(tokens_cum_prob, dim=-1)
+        needed_tokens = needed_tokens + 1
+        needed_tokens = needed_tokens.unsqueeze(-1)
+
+        needed_tokens = torch.log(needed_tokens.float())
+
         # Concatenating embeddings
-        x = torch.cat((encoded_sorted_TDS_normalized, encoded_ATP_R + encoded_normalized_ATP), dim=-1)
-        
+        x = torch.cat((encoded_sorted_TDS_normalized, encoded_ATP_R + encoded_normalized_ATP, needed_tokens), dim=-1)
+
+        x = self.fusion_proj(x)
+
         # Adding CLS token
         b, n, _ = x.shape
         cls_tokens = repeat(self.cls_token, '1 1 d -> b 1 d', b=b)
