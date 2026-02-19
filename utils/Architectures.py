@@ -219,7 +219,11 @@ class LOS_Net(nn.Module):
         
         
         # Input embedding layer
-        self.input_proj = nn.Linear(input_dim, self.hidden_dim // 2)
+        self.input_proj = nn.Sequential(
+            nn.Linear(input_dim, self.hidden_dim),
+            nn.GELU(),
+            nn.Linear(self.hidden_dim, self.hidden_dim // 2)
+        )
         
         # CLS token
         self.cls_token = nn.Parameter(torch.randn(1, 1, self.hidden_dim))
