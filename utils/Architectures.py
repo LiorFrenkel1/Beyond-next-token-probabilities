@@ -218,12 +218,12 @@ class LOS_Net(nn.Module):
         
         
         
-        # Input embedding layer
-        self.input_proj = nn.Sequential(
-            nn.Linear(input_dim, self.hidden_dim),
-            nn.GELU(),
-            nn.Linear(self.hidden_dim, self.hidden_dim // 2)
-        )
+        # Input embedding layer (Added a little MLP in order to process the whole data to find complex and far
+        # connections before passing it to the transformer)
+        self.input_first_lin = nn.Linear(input_dim, self.hidden_dim)
+        self.input_gelu = nn.GELU()
+        self.input_second_lin = nn.Linear(self.hidden_dim, self.hidden_dim // 2)
+
         
         # CLS token
         self.cls_token = nn.Parameter(torch.randn(1, 1, self.hidden_dim))
@@ -279,11 +279,13 @@ class LOS_Net(nn.Module):
         encoded_normalized_ATP = normalized_ATP * self.param_for_normalized_ATP
         
         
-        # Encoding normalized vocab
-        encoded_sorted_TDS_normalized = self.input_proj(sorted_TDS_normalized.to(torch.float32))
+        # Encoding MLP vocab
+        first_lin = self.input_first_lin(sorted_TDS_normalized.to(torch.float32))
+        gelu = self.input_gelu(first_lin)
+        TDS_after_MLP = self.input_second_lin(gelu)
         
         # Concatenating embeddings
-        x = torch.cat((encoded_sorted_TDS_normalized, encoded_ATP_R + encoded_normalized_ATP), dim=-1)
+        x = torch.cat((TDS_after_MLP, encoded_ATP_R + encoded_normalized_ATP), dim=-1)
         
         # Adding CLS token
         b, n, _ = x.shape
