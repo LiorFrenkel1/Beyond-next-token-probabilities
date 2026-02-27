@@ -287,7 +287,11 @@ class LOS_Net(nn.Module):
         # All values will be above 0 after adding epsilon because probabilities are >= 0
         positive_sorted_TDS_normalized = sorted_TDS_normalized.to(torch.float32) + epsilon
         sorted_TDS_normalized_logged = torch.log(positive_sorted_TDS_normalized)
-        encoded_sorted_TDS_normalized = self.input_proj(sorted_TDS_normalized_logged)
+
+        # Encoding MLP vocab
+        first_lin = self.input_first_lin(sorted_TDS_normalized_logged)
+        gelu = self.input_gelu(first_lin)
+        TDS_after_MLP = self.input_second_lin(gelu)
         
         # Concatenating embeddings
         x = torch.cat((encoded_sorted_TDS_normalized, encoded_ATP_R + encoded_normalized_ATP + delta_between_probabilities), dim=-1)
