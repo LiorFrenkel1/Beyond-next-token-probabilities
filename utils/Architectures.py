@@ -218,10 +218,13 @@ class LOS_Net(nn.Module):
         
         # Weight for the delta for each token between the probability of the current token and the previous probability
         self.param_for_probabilities_delta = nn.Parameter(torch.randn(1, 1, self.hidden_dim // 2))
-        
-        # Input embedding layer
-        self.input_proj = nn.Linear(input_dim, self.hidden_dim // 2)
-        
+
+        # Input embedding layer (Added a little MLP in order to process the whole data to find complex and far
+        # connections before passing it to the transformer)
+        self.input_first_lin = nn.Linear(input_dim, self.hidden_dim)
+        self.input_gelu = nn.GELU()
+        self.input_second_lin = nn.Linear(self.hidden_dim, self.hidden_dim // 2)
+
         # CLS token
         self.cls_token = nn.Parameter(torch.randn(1, 1, self.hidden_dim))
         
