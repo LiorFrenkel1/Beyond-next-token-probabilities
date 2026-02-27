@@ -282,7 +282,12 @@ class LOS_Net(nn.Module):
         delta_between_probabilities = delta * self.param_for_probabilities_delta
         
         # Encoding normalized vocab
-        encoded_sorted_TDS_normalized = self.input_proj(sorted_TDS_normalized.to(torch.float32))
+        # Logging the probabilities so the effect of the small probabilities will be larger
+        epsilon = 0.00000001 # Adding epsilon to all values so logging the probabilities will not cause error
+        # All values will be above 0 after adding epsilon because probabilities are >= 0
+        positive_sorted_TDS_normalized = sorted_TDS_normalized.to(torch.float32) + epsilon
+        sorted_TDS_normalized_logged = torch.log(positive_sorted_TDS_normalized)
+        encoded_sorted_TDS_normalized = self.input_proj(sorted_TDS_normalized_logged)
         
         # Concatenating embeddings
         x = torch.cat((encoded_sorted_TDS_normalized, encoded_ATP_R + encoded_normalized_ATP + delta_between_probabilities), dim=-1)
