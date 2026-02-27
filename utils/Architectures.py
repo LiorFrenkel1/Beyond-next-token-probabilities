@@ -297,7 +297,7 @@ class LOS_Net(nn.Module):
         TDS_after_MLP = self.input_second_lin(gelu)
         
         # Concatenating embeddings
-        x = torch.cat((encoded_sorted_TDS_normalized, encoded_ATP_R + encoded_normalized_ATP + delta_between_probabilities), dim=-1)
+        x = torch.cat((TDS_after_MLP, encoded_ATP_R + encoded_normalized_ATP + delta_between_probabilities), dim=-1)
         
         # Adding CLS token
         b, n, _ = x.shape
