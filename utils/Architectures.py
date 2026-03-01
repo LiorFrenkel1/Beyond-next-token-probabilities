@@ -292,8 +292,12 @@ class LOS_Net(nn.Module):
         positive_sorted_TDS_normalized = sorted_TDS_normalized.to(torch.float32) + epsilon
         sorted_TDS_normalized_logged = torch.log(positive_sorted_TDS_normalized)
 
+        min_probability = sorted_TDS_normalized_logged.min(dim=-1, keepdim=True)[0]
+        max_probability = sorted_TDS_normalized_logged.max(dim=-1, keepdim=True)[0]
+        min_max_TDS = (sorted_TDS_normalized_logged - min_probability) / (max_probability - min_probability + epsilon)
+
         # Encoding MLP vocab
-        first_lin = self.input_first_lin(sorted_TDS_normalized_logged)
+        first_lin = self.input_first_lin(min_max_TDS)
         gelu = self.input_gelu(first_lin)
         dropout = self.input_dropout(gelu)
         TDS_after_MLP = self.input_second_lin(dropout)
