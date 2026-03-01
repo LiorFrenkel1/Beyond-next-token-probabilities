@@ -223,6 +223,7 @@ class LOS_Net(nn.Module):
         # connections before passing it to the transformer)
         self.input_first_lin = nn.Linear(input_dim, self.hidden_dim)
         self.input_gelu = nn.GELU()
+        self.input_dropout = nn.Dropout(0.1)
         self.input_second_lin = nn.Linear(self.hidden_dim, self.hidden_dim // 2)
 
         # CLS token
@@ -291,10 +292,15 @@ class LOS_Net(nn.Module):
         positive_sorted_TDS_normalized = sorted_TDS_normalized.to(torch.float32) + epsilon
         sorted_TDS_normalized_logged = torch.log(positive_sorted_TDS_normalized)
 
+        min_probability = sorted_TDS_normalized_logged.min(dim=-1, keepdim=True)[0]
+        max_probability = sorted_TDS_normalized_logged.max(dim=-1, keepdim=True)[0]
+        min_max_TDS = (sorted_TDS_normalized_logged - min_probability) / (max_probability - min_probability + epsilon)
+
         # Encoding MLP vocab
-        first_lin = self.input_first_lin(sorted_TDS_normalized_logged)
+        first_lin = self.input_first_lin(min_max_TDS)
         gelu = self.input_gelu(first_lin)
-        TDS_after_MLP = self.input_second_lin(gelu)
+        dropout = self.input_dropout(gelu)
+        TDS_after_MLP = self.input_second_lin(dropout)
         
         # Concatenating embeddings
         x = torch.cat((TDS_after_MLP, encoded_ATP_R + encoded_normalized_ATP + delta_between_probabilities), dim=-1)
