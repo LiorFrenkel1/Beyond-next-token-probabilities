@@ -77,7 +77,7 @@ def get_train_test_datasets(args, logger):
         )
 
         
-        bookmia_train_indices, bookmia_test_indices = split_bookmia(train_size=0.80, seed=42)
+        bookmia_train_indices, bookmia_test_indices = split_bookmia(train_size=0.80, seed=43)
         dataset_train = Subset(dataset, bookmia_train_indices)
         dataset_test = Subset(dataset, bookmia_test_indices)
     else:
