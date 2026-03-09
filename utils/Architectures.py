@@ -222,7 +222,7 @@ class LOS_Net(nn.Module):
         self.input_proj = nn.Linear(input_dim, self.hidden_dim // 2)
 
         # Maps the features (hidden/2 + hidden/2 + 1) back to hidden_dim so it wouldnt crash
-        self.fusion_proj = nn.Linear(self.hidden_dim + 1, self.hidden_dim)
+        self.downscale = nn.Linear(self.hidden_dim + 1, self.hidden_dim)
         
         # CLS token
         self.cls_token = nn.Parameter(torch.randn(1, 1, self.hidden_dim))
@@ -291,12 +291,13 @@ class LOS_Net(nn.Module):
         needed_tokens = needed_tokens + 1
         needed_tokens = needed_tokens.unsqueeze(-1)
 
+        # Log the result becuase all the numbers in the TDS are below 1 and this number might be well over 100
         needed_tokens = torch.log(needed_tokens.float())
 
         # Concatenating embeddings
         x = torch.cat((encoded_sorted_TDS_normalized, encoded_ATP_R + encoded_normalized_ATP, needed_tokens), dim=-1)
 
-        x = self.fusion_proj(x)
+        x = self.downscale(x)
 
         # Adding CLS token
         b, n, _ = x.shape
